@@ -13,11 +13,17 @@
 
 #define PORT "3490"  // the port users will be connecting to
 
+#define ERRNUM -1
 #define BACKLOG 10	 // how many pending connections queue will hold
+#define MAXDATASIZE 100 // max number of bytes we can get at once
+
 
 void sigchld_handler(int s);
 void *getInputAddr(struct sockaddr *sa); // sockaddr used by kernel to store most addresses.
-void clientInteractionLogic(int listening_filedes, int new_filedes);
+void clientInteractionLogic(int socket_filedes);
+void sendingLogic(int sending_filedes);
+void listeningLogic(int listening_filedes);
+void reapDeadProcesses();
 
 int main(void)
 {
@@ -41,23 +47,25 @@ int main(void)
 
 	// loop through all the results and bind to the first we can
 	struct addrinfo *ptr;
-	int sock_filedes;  // listen on sock_filedes
+	int listening_filedes;  // listen on sock_filedes
 	int yes=1;
 	for(ptr = servinfo; ptr != NULL; ptr = ptr->ai_next) {
-		sock_filedes = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-		if (sock_filedes == -1) {
+		listening_filedes = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+		if (listening_filedes == -1) {
 			perror("server: socket");
 			continue;
 		}
 
-		if (setsockopt(sock_filedes, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int))
-				== -1) {
+		int set_socket_status = setsockopt(listening_filedes, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+		if (set_socket_status
+				== ERRNUM) {
 			perror("setsockopt");
 			exit(1);
 		}
 
-		if (bind(sock_filedes, ptr->ai_addr, ptr->ai_addrlen) == -1) {
-			close(sock_filedes);
+		int bind_status = bind(listening_filedes, ptr->ai_addr, ptr->ai_addrlen);
+		if (bind_status == ERRNUM) {
+			close(listening_filedes);
 			perror("server: bind");
 			continue;
 		}
@@ -71,43 +79,39 @@ int main(void)
 
 	freeaddrinfo(servinfo); // all done with this structure
 
-	if (listen(sock_filedes, BACKLOG) == -1) {
+	int listenStatus = listen(listening_filedes, BACKLOG);
+	if (listenStatus == ERRNUM) {
 		perror("listen");
 		exit(1);
 	}
 
-	struct sigaction sa;
-	sa.sa_handler = sigchld_handler; // reap all dead processes
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-		perror("sigaction");
-		exit(1);
-	}
+	reapDeadProcesses();
 
 	printf("server: waiting for connections...\n");
 
 	socklen_t sin_size;
-	struct sockaddr_storage their_addr; // connector's address information
+	struct sockaddr_storage client_addr; // connector's address information
 	int new_filedes;  //new connection on new_filedes
 	char addr_as_text[INET6_ADDRSTRLEN];
-	while(1) {  // main accept() loop
-		sin_size = sizeof their_addr;
-		new_filedes = accept(sock_filedes, (struct sockaddr *)&their_addr, &sin_size);
-		if (new_filedes == -1) {
+	while(1) {  // main accept() loop: waiting for client requests
+		sin_size = sizeof client_addr;
+		new_filedes = accept(listening_filedes, (struct sockaddr *)&client_addr, &sin_size);
+		if (new_filedes == ERRNUM) {
 			perror("accept");
 			continue;
 		}
 
-		inet_ntop(their_addr.ss_family,
-			getInputAddr((struct sockaddr *)&their_addr),
+		inet_ntop(client_addr.ss_family,
+			getInputAddr((struct sockaddr *)&client_addr),
 			addr_as_text, sizeof addr_as_text);
 		printf("server: got connection from %s\n", addr_as_text);
 
 		int isChild = (fork() == 0);
-		if (isChild) { // this is the child process
-			clientInteractionLogic(sock_filedes, new_filedes);
+		if (isChild) { // this is the child process to handle client
+			close(listening_filedes);  // child doesn't need the listener
+			clientInteractionLogic(new_filedes);
 		}
+
 		close(new_filedes);  // parent doesn't need this
 	}
 
@@ -117,6 +121,17 @@ int main(void)
 void sigchld_handler(int s)
 {
 	while(waitpid(-1, NULL, WNOHANG) > 0);
+}
+
+void reapDeadProcesses() {
+	struct sigaction sa;
+	sa.sa_handler = sigchld_handler; // reap all dead processes
+    sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+	if (sigaction(SIGCHLD, &sa, NULL) == ERRNUM) {
+		perror("sigaction");
+		exit(1);
+	}
 }
 
 // get sockaddr, IPv4 or IPv6:
@@ -129,14 +144,39 @@ void *getInputAddr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-void clientInteractionLogic(int listening_filedes, int new_filedes) {
+
+
+/*
+ * TODO: 1. implement ability to confirm that server has recieved a client command
+ * 		 2. ability to act on a client command
+ */
+void clientInteractionLogic(int socket_filedes) {
 	// this is the child process
 
-	close(listening_filedes); // child doesn't need the listener
-	if (send(new_filedes, "Hello, World!", 13, 0) == -1)
+	sendingLogic(socket_filedes);
+	listeningLogic(socket_filedes);
+
+	close(socket_filedes);
+	exit(0);
+}
+
+void sendingLogic(int sending_filedes) {
+	char* simple_message = "From server: Hello, world!";
+	ssize_t sendStatus = send(sending_filedes, simple_message, strlen(simple_message), 0);
+	if (sendStatus == ERRNUM) {
 		// send message thru socket
 		perror("send");
+	}
+}
 
-	close(new_filedes);
-	exit(0);
+void listeningLogic(int listening_filedes) {
+	char in_buffer[MAXDATASIZE];
+	int numbytes = recv(listening_filedes, in_buffer, MAXDATASIZE - 1, 0);
+	if ((numbytes) == ERRNUM) {
+		perror("server recv");
+		exit(1);
+	}
+
+	in_buffer[numbytes] = '\0';
+	printf("server: received '%s'\n", in_buffer);
 }

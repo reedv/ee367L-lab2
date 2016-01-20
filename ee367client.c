@@ -11,11 +11,13 @@
 #include <arpa/inet.h>
 
 #define PORT "3490" // the port client will be connecting to 
-
+#define ERRNUM -1
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
 
 void *getInputAddr(struct sockaddr *sa);
-void serverInteractionLogic(int sock_filedes);
+void serverInteractionLogic(int socket_filedes);
+void sendingLogic(int sending_filedes);
+void listeningLogic(int listening_filedes);
 
 int main(int argc, char *argv[])
 {
@@ -45,19 +47,19 @@ int main(int argc, char *argv[])
 
 	// loop through all the results and connect to the first we can
 	struct addrinfo *ptr;
-	int sock_filedes;
+	int socket_filedes;
 	for(ptr = servinfo; ptr != NULL; ptr = ptr->ai_next) {
-		sock_filedes = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-		int sock_filedes_error = (sock_filedes == -1);
+		socket_filedes = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+		int sock_filedes_error = (socket_filedes == ERRNUM);
 		if (sock_filedes_error) {
 			perror("client: socket");
 			continue;
 		}
 
-		int connect_sock_error = connect(sock_filedes, ptr->ai_addr, ptr->ai_addrlen)
-								 == -1;
+		int connect_sock_error = connect(socket_filedes, ptr->ai_addr, ptr->ai_addrlen)
+								 == ERRNUM;
 		if (connect_sock_error) {
-			close(sock_filedes);
+			close(socket_filedes);
 			perror("client: connect");
 			continue;
 		}
@@ -77,13 +79,10 @@ int main(int argc, char *argv[])
 
 	freeaddrinfo(servinfo); // all done with this structure
 
+	//implement listening and sending logic here
 
-	// Prototype: int recv (int socket, void *buffer, size_t size, int flags)
-	// Description:
-	// The recv function is like read, but with the additional flags flags.
-	//    The possible values of flags are described in Socket Data Options.
-	//    This function returns the number of bytes received, or -1 on failure.
-	serverInteractionLogic(sock_filedes);
+
+	serverInteractionLogic(socket_filedes);
 	return 0;
 }
 
@@ -97,19 +96,45 @@ void *getInputAddr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-void serverInteractionLogic(int sock_filedes) {
+
+
+/*
+ * TODO: 1. implement ability to send simple command to server
+ * 		 	- add sending file descriptor
+ * 		 1.2. ability to send a user-given command
+ */
+void serverInteractionLogic(int socket_filedes) {
+
+	sendingLogic(socket_filedes);
+	listeningLogic(socket_filedes);
+
+	close(socket_filedes);
+	close(socket_filedes);
+}
+
+void sendingLogic(int sending_filedes) {
+	char* simple_message = "From client: Hello, world!";
+	ssize_t sendStatus = send(sending_filedes, simple_message, strlen(simple_message), 0);
+
+	if (sendStatus == ERRNUM) {
+		// send message thru socket
+		perror("send");
+	}
+}
+
+void listeningLogic(int listening_filedes) {
 	// Prototype: int recv (int socket, void *buffer, size_t size, int flags)
 	// Description:
 	// The recv function is like read, but with the additional flags flags.
 	//    The possible values of flags are described in Socket Data Options.
 	//    This function returns the number of bytes received, or -1 on failure.
 	char in_buffer[MAXDATASIZE];
-	int numbytes = recv(sock_filedes, in_buffer, MAXDATASIZE - 1, 0);
-	if ((numbytes) == -1) {
-		perror("recv");
+	int numbytes = recv(listening_filedes, in_buffer, MAXDATASIZE - 1, 0);
+	if ((numbytes) == ERRNUM) {
+		perror("client recv");
 		exit(1);
 	}
+
 	in_buffer[numbytes] = '\0';
 	printf("client: received '%s'\n", in_buffer);
-	close(sock_filedes);
 }

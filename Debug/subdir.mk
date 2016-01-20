@@ -9,7 +9,9 @@ C_SRCS += \
 ../server.c 
 
 O_SRCS += \
-../pipe.o 
+../client.o \
+../pipe.o \
+../server.o 
 
 OBJS += \
 ./client.o \

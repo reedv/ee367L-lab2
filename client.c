@@ -1,5 +1,6 @@
 /*
 ** client.c -- a stream socket client demo
+** client connects to server, which returns a message
 */
 
 #include <stdio.h>
@@ -19,10 +20,11 @@
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
 
 void *getInputAddr(struct sockaddr *sa);
+void serverInteractionLogic(int sock_filedes);
 
 int main(int argc, char *argv[])
 {
-	struct addrinfo hints, *servinfo;
+	struct addrinfo hints, *servinfo;  // addrinfo structs
 
 	int usage_error = (argc != 2);
 	if (usage_error) {
@@ -38,9 +40,9 @@ int main(int argc, char *argv[])
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	int rv;
 	char* hostname = argv[1];
-	int get_addr_info_failed = (rv=getaddrinfo(hostname, PORT, &hints, &servinfo)) != 0;
+	int rv = getaddrinfo(hostname, PORT, &hints, &servinfo);
+	int get_addr_info_failed = (rv != 0);
 	if (get_addr_info_failed) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
@@ -48,19 +50,19 @@ int main(int argc, char *argv[])
 
 	// loop through all the results and connect to the first we can
 	struct addrinfo *ptr;
-	int sock_fieldes;
+	int sock_filedes;
 	for(ptr = servinfo; ptr != NULL; ptr = ptr->ai_next) {
-		int sock_filedes_error = (sock_fieldes=socket(ptr->ai_family,
-								  ptr->ai_socktype, ptr->ai_protocol))
-								  == -1;
+		sock_filedes = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+		int sock_filedes_error = (sock_filedes == -1);
 		if (sock_filedes_error) {
 			perror("client: socket");
 			continue;
 		}
-		int connect_sock_error = connect(sock_fieldes, ptr->ai_addr, ptr->ai_addrlen)
+
+		int connect_sock_error = connect(sock_filedes, ptr->ai_addr, ptr->ai_addrlen)
 								 == -1;
 		if (connect_sock_error) {
-			close(sock_fieldes);
+			close(sock_filedes);
 			perror("client: connect");
 			continue;
 		}
@@ -85,19 +87,8 @@ int main(int argc, char *argv[])
 	// Description:
 	// The recv function is like read, but with the additional flags flags.
 	//    The possible values of flags are described in Socket Data Options.
-	int numbytes;
-	char buffer[MAXDATASIZE];
-	int numbytes = recv(sock_fieldes, buffer, MAXDATASIZE - 1, 0);
-	if ((numbytes) == -1) {
-	    perror("recv");
-	    exit(1);
-	}
-	buffer[numbytes] = '\0';
-
-	printf("client: received '%s'\n",buffer);
-
-	close(sock_fieldes);
-
+	//    This function returns the number of bytes received, or -1 on failure.
+	serverInteractionLogic(sock_filedes);
 	return 0;
 }
 
@@ -109,4 +100,21 @@ void *getInputAddr(struct sockaddr *sa)
 	}
 
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+
+void serverInteractionLogic(int sock_filedes) {
+	// Prototype: int recv (int socket, void *buffer, size_t size, int flags)
+	// Description:
+	// The recv function is like read, but with the additional flags flags.
+	//    The possible values of flags are described in Socket Data Options.
+	//    This function returns the number of bytes received, or -1 on failure.
+	char in_buffer[MAXDATASIZE];
+	int numbytes = recv(sock_filedes, in_buffer, MAXDATASIZE - 1, 0);
+	if ((numbytes) == -1) {
+		perror("recv");
+		exit(1);
+	}
+	in_buffer[numbytes] = '\0';
+	printf("client: received '%s'\n", in_buffer);
+	close(sock_filedes);
 }

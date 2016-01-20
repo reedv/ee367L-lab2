@@ -20,6 +20,8 @@ void error(char *s);
 
 char *data = "Some input data\n"; 
 
+void childLogic(int in_descriptor[2], int out_descriptor[2]);
+
 int main()
 { 
 	int in_descriptor[2],
@@ -46,45 +48,7 @@ int main()
 	int isChildProcess = ((pid=fork()) == 0);
 	if (isChildProcess) {
 		/* This is the child process */
-
-		/* Close stdin, stdout, stderr */
-		int stdin = 0,
-			stdout =1,
-			stderr = 2;
-		close(stdin);
-		close(stdout);
-		close(stderr);
-		/* make our pipes, our new stdin,stdout and stderr */
-		// copies the descriptor arg1=old to descriptor number arg2=new.
-
-		dup2(in_descriptor[pipe_read],stdin);
-		dup2(out_descriptor[pipe_write],stdout);
-		dup2(out_descriptor[pipe_write],stderr);
-
-		/* Close the other ends of the pipes of the child that the parent will use, because if
-		 * we leave these open in the child, the child/parent will not get an EOF
-		 * when the parent/child closes their end of the pipe.
-		 */
-
-		close(in_descriptor[pipe_write]);
-		close(out_descriptor[pipe_read]);
-
-		/* Over-write the child process with the hexdump binary.
-		 * The zeroth argument is the path to the program 'hexdump'
-		 * The second argument is the name of the program to be run, which
-		 *    is 'hexdump'.  This is a bit redundant to the zeroth argument,
-		 *    but it's how it works.
-		 * The third argument '-C' is one of the options of hexdump.
-		 * The fourth argument is a terminating symbol -- a NULL pointer
-		 *    -- to indicate the end of the arguments.
-		 * In general, execl accepts an arbitrary number of arguments.
-		 */
-		execl("/usr/bin/hexdump", "hexdump", "-C", (char *)NULL);
-
-		/* If hexdump wasn't executed then we would still have the following
-		 * function, which would indicate an error
-		 */
-		error("Could not exec hexdump");
+		childLogic(in_descriptor, out_descriptor);
 	}
 
 	/*  The following is in the parent process */
@@ -132,5 +96,41 @@ void error(char *s)
 { 
 	perror(s);
 	exit(1);
+}
+
+void childLogic(int in_descriptor[2], int out_descriptor[2]) {
+	/* This is the child process */
+	const int pipe_read = 0, pipe_write = 1;
+	/* Close stdin, stdout, stderr */
+	int stdin = 0, stdout = 1, stderr = 2;
+	close(stdin);
+	close(stdout);
+	close(stderr);
+	/* make our pipes, our new stdin,stdout and stderr */
+	// copies the descriptor arg1=old to descriptor number arg2=new.
+	dup2(in_descriptor[pipe_read], stdin);
+	dup2(out_descriptor[pipe_write], stdout);
+	dup2(out_descriptor[pipe_write], stderr);
+	/* Close the other ends of the pipes of the child that the parent will use, because if
+	 * we leave these open in the child, the child/parent will not get an EOF
+	 * when the parent/child closes their end of the pipe.
+	 */
+	close(in_descriptor[pipe_write]);
+	close(out_descriptor[pipe_read]);
+	/* Over-write the child process with the hexdump binary.
+	 * The zeroth argument is the path to the program 'hexdump'
+	 * The second argument is the name of the program to be run, which
+	 *    is 'hexdump'.  This is a bit redundant to the zeroth argument,
+	 *    but it's how it works.
+	 * The third argument '-C' is one of the options of hexdump.
+	 * The fourth argument is a terminating symbol -- a NULL pointer
+	 *    -- to indicate the end of the arguments.
+	 * In general, execl accepts an arbitrary number of arguments.
+	 */
+	execl("/usr/bin/hexdump", "hexdump", "-C", (char*) NULL);
+	/* If hexdump wasn't executed then we would still have the following
+	 * function, which would indicate an error
+	 */
+	error("Could not exec hexdump");
 }
  

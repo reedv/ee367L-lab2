@@ -22,11 +22,7 @@ void *getInputAddr(struct sockaddr *sa);
 
 int main(int argc, char *argv[])
 {
-	int sockfd, numbytes;  
-	char buffer[MAXDATASIZE];
-	struct addrinfo hints, *servinfo, *p;
-	int rv;
-	char s[INET6_ADDRSTRLEN];
+	struct addrinfo hints, *servinfo;
 
 	int usage_error = (argc != 2);
 	if (usage_error) {
@@ -34,53 +30,73 @@ int main(int argc, char *argv[])
 	    exit(1);
 	}
 
+	// Prototype: void * memset (void *block, int c, size_t size)
+	// Description:
+	//    This function copies the value of c (converted to an unsigned char) into each of
+	//    the first size bytes of the object beginning at block. It returns the value of block.
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	if ((rv = getaddrinfo(argv[1], PORT, &hints, &servinfo)) != 0) {
+	int rv;
+	char* hostname = argv[1];
+	int get_addr_info_failed = (rv=getaddrinfo(hostname, PORT, &hints, &servinfo)) != 0;
+	if (get_addr_info_failed) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		return 1;
 	}
 
 	// loop through all the results and connect to the first we can
-	for(p = servinfo; p != NULL; p = p->ai_next) {
-		if ((sockfd = socket(p->ai_family, p->ai_socktype,
-				p->ai_protocol)) == -1) {
+	struct addrinfo *ptr;
+	int sock_fieldes;
+	for(ptr = servinfo; ptr != NULL; ptr = ptr->ai_next) {
+		int sock_filedes_error = (sock_fieldes=socket(ptr->ai_family,
+								  ptr->ai_socktype, ptr->ai_protocol))
+								  == -1;
+		if (sock_filedes_error) {
 			perror("client: socket");
 			continue;
 		}
-
-		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			close(sockfd);
+		int connect_sock_error = connect(sock_fieldes, ptr->ai_addr, ptr->ai_addrlen)
+								 == -1;
+		if (connect_sock_error) {
+			close(sock_fieldes);
 			perror("client: connect");
 			continue;
 		}
 
 		break;
 	}
-
-	if (p == NULL) {
+	if (ptr == NULL) {
 		fprintf(stderr, "client: failed to connect\n");
 		return 2;
 	}
 
-	inet_ntop(p->ai_family, getInputAddr((struct sockaddr *)p->ai_addr),
-			s, sizeof s);
-	printf("client: connecting to %s\n", s);
+	void* addr_as_binary = getInputAddr((struct sockaddr*) ptr->ai_addr);
+	char addr_as_text[INET6_ADDRSTRLEN];
+	inet_ntop(ptr->ai_family, addr_as_binary,
+			  addr_as_text, sizeof addr_as_text);
+	printf("client: connecting to %s\n", addr_as_text);
 
 	freeaddrinfo(servinfo); // all done with this structure
 
-	if ((numbytes = recv(sockfd, buffer, MAXDATASIZE-1, 0)) == -1) {
+
+	// Prototype: int recv (int socket, void *buffer, size_t size, int flags)
+	// Description:
+	// The recv function is like read, but with the additional flags flags.
+	//    The possible values of flags are described in Socket Data Options.
+	int numbytes;
+	char buffer[MAXDATASIZE];
+	int numbytes = recv(sock_fieldes, buffer, MAXDATASIZE - 1, 0);
+	if ((numbytes) == -1) {
 	    perror("recv");
 	    exit(1);
 	}
-
 	buffer[numbytes] = '\0';
 
 	printf("client: received '%s'\n",buffer);
 
-	close(sockfd);
+	close(sock_fieldes);
 
 	return 0;
 }

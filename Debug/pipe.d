@@ -1,0 +1,1 @@
+pipe.o: ../pipe.c

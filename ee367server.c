@@ -25,11 +25,12 @@
 
 
 void sigchld_handler(int s);
+void reapDeadProcesses();
 void *getInputAddr(struct sockaddr *sa); // sockaddr used by kernel to store most addresses.
 void clientInteractionLogic(int socket_filedes);
-void sendingLogic(int sending_filedes);
+void sendingLogic(int sending_filedes, char* out_buffer);
 void listeningLogic(int listening_filedes, char* in_buffer);
-void reapDeadProcesses();
+void processClientMessage(char* command, char* out_buffer);
 
 int main(void)
 {
@@ -160,22 +161,15 @@ void *getInputAddr(struct sockaddr *sa)
 void clientInteractionLogic(int socket_filedes) {  // this is the child process
 	const char* EXIT_CMD = "quit";
 	char command[MAXDATASIZE];
+	char out_buffer[MAXDATASIZE];
 	while(strcmp(command, EXIT_CMD)) {
-		sendingLogic(socket_filedes);
 		listeningLogic(socket_filedes, command);
+		processClientMessage(command, out_buffer);
+		sendingLogic(socket_filedes, out_buffer);
 	}
 
 	close(socket_filedes);
 	exit(0);
-}
-
-void sendingLogic(int sending_filedes) {
-	char* simple_message = "From server: message received!";
-	ssize_t sendStatus = send(sending_filedes, simple_message, strlen(simple_message), 0);
-	if (sendStatus == ERRNUM) {
-		// send message thru socket
-		perror("send");
-	}
 }
 
 void listeningLogic(int listening_filedes, char* in_buffer) {
@@ -188,4 +182,22 @@ void listeningLogic(int listening_filedes, char* in_buffer) {
 
 	in_buffer[numbytes] = '\0';
 	printf("server: received '%s'\n", in_buffer);
+}
+
+void processClientMessage(char* command, char* out_buffer) {
+	if(!strcmp(command, "test")) {
+		strcpy(out_buffer, "test");
+	} else {
+		strcpy(out_buffer, "default");
+	}
+}
+
+void sendingLogic(int sending_filedes, char* out_buffer) {
+	//char* message = strcat("From server: message received: ", out_buffer);
+	ssize_t sendStatus = send(sending_filedes, out_buffer, strlen(out_buffer), 0);
+
+	if (sendStatus == ERRNUM) {
+		// send message thru socket
+		perror("send");
+	}
 }

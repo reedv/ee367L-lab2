@@ -147,7 +147,7 @@ void *getInputAddr(struct sockaddr *sa)
 
 
 /*
- * TODO: 1. implement ability to confirm that server has recieved a client command
+ * TODO: 1. implement ability to confirm that server has received a client command DONE
  * 		 2. ability to act on a client command
  */
 void clientInteractionLogic(int socket_filedes) {
@@ -161,7 +161,7 @@ void clientInteractionLogic(int socket_filedes) {
 }
 
 void sendingLogic(int sending_filedes) {
-	char* simple_message = "From server: Hello, world!";
+	char* simple_message = "From server: message received!";
 	ssize_t sendStatus = send(sending_filedes, simple_message, strlen(simple_message), 0);
 	if (sendStatus == ERRNUM) {
 		// send message thru socket

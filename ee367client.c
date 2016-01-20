@@ -99,9 +99,10 @@ void *getInputAddr(struct sockaddr *sa)
 
 
 /*
- * TODO: 1. implement ability to send simple command to server
- * 		 	- add sending file descriptor
- * 		 1.2. ability to send a user-given command
+ * TODO: 1. implement ability to send simple command to server DONE
+ * 		 	- add sending file descriptor WRONG
+ * 		 1.2. ability to send a user-given command DONE
+ * 		 1.3. ability to con't. loop to give commands until explicit exit
  */
 void serverInteractionLogic(int socket_filedes) {
 
@@ -113,13 +114,17 @@ void serverInteractionLogic(int socket_filedes) {
 }
 
 void sendingLogic(int sending_filedes) {
-	char* simple_message = "From client: Hello, world!";
-	ssize_t sendStatus = send(sending_filedes, simple_message, strlen(simple_message), 0);
+	char command[MAXDATASIZE];
+	printf("client367>> ");
+	scanf("%s", command);
+	printf("Sending %s\n", command);
+	ssize_t sendStatus = send(sending_filedes, command, MAXDATASIZE-1/*strlen(command)*/, 0);
 
 	if (sendStatus == ERRNUM) {
 		// send message thru socket
 		perror("send");
 	}
+
 }
 
 void listeningLogic(int listening_filedes) {
@@ -129,7 +134,7 @@ void listeningLogic(int listening_filedes) {
 	//    The possible values of flags are described in Socket Data Options.
 	//    This function returns the number of bytes received, or -1 on failure.
 	char in_buffer[MAXDATASIZE];
-	int numbytes = recv(listening_filedes, in_buffer, MAXDATASIZE - 1, 0);
+	int numbytes = recv(listening_filedes, in_buffer, MAXDATASIZE-1, 0);
 	if ((numbytes) == ERRNUM) {
 		perror("client recv");
 		exit(1);

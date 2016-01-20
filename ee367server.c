@@ -22,7 +22,7 @@ void sigchld_handler(int s);
 void *getInputAddr(struct sockaddr *sa); // sockaddr used by kernel to store most addresses.
 void clientInteractionLogic(int socket_filedes);
 void sendingLogic(int sending_filedes);
-void listeningLogic(int listening_filedes);
+void listeningLogic(int listening_filedes, char* in_buffer);
 void reapDeadProcesses();
 
 int main(void)
@@ -148,13 +148,16 @@ void *getInputAddr(struct sockaddr *sa)
 
 /*
  * TODO: 1. implement ability to confirm that server has received a client command DONE
+ * 		 1.2. ability to con't. loop to give commands until explicit exit DONE
  * 		 2. ability to act on a client command
  */
-void clientInteractionLogic(int socket_filedes) {
-	// this is the child process
-
-	sendingLogic(socket_filedes);
-	listeningLogic(socket_filedes);
+void clientInteractionLogic(int socket_filedes) {  // this is the child process
+	const char* EXIT_CMD = "quit";
+	char command[MAXDATASIZE];
+	while(strcmp(command, EXIT_CMD)) {
+		sendingLogic(socket_filedes);
+		listeningLogic(socket_filedes, command);
+	}
 
 	close(socket_filedes);
 	exit(0);
@@ -169,8 +172,8 @@ void sendingLogic(int sending_filedes) {
 	}
 }
 
-void listeningLogic(int listening_filedes) {
-	char in_buffer[MAXDATASIZE];
+void listeningLogic(int listening_filedes, char* in_buffer) {
+	//char in_buffer[MAXDATASIZE];
 	int numbytes = recv(listening_filedes, in_buffer, MAXDATASIZE - 1, 0);
 	if ((numbytes) == ERRNUM) {
 		perror("server recv");

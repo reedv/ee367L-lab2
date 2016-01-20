@@ -16,7 +16,7 @@
 
 void *getInputAddr(struct sockaddr *sa);
 void serverInteractionLogic(int socket_filedes);
-void sendingLogic(int sending_filedes);
+void sendingLogic(int sending_filedes, char* command);
 void listeningLogic(int listening_filedes);
 
 int main(int argc, char *argv[])
@@ -101,20 +101,24 @@ void *getInputAddr(struct sockaddr *sa)
 /*
  * TODO: 1. implement ability to send simple command to server DONE
  * 		 	- add sending file descriptor WRONG
- * 		 1.2. ability to send a user-given command DONE
- * 		 1.3. ability to con't. loop to give commands until explicit exit
+ * 		 1.2. ability to send a single-word, user-given command DONE
+ * 		 1.3. ability to con't. loop to give commands until explicit exit DONE
+ * 		 2.
  */
 void serverInteractionLogic(int socket_filedes) {
-
-	sendingLogic(socket_filedes);
-	listeningLogic(socket_filedes);
+	const char* EXIT_CMD = "quit";
+	char command[MAXDATASIZE];
+	while(strcmp(command, EXIT_CMD)) {
+		sendingLogic(socket_filedes, command);
+		listeningLogic(socket_filedes);
+	}
 
 	close(socket_filedes);
 	close(socket_filedes);
 }
 
-void sendingLogic(int sending_filedes) {
-	char command[MAXDATASIZE];
+void sendingLogic(int sending_filedes, char *command) {
+	//char command[MAXDATASIZE];
 	printf("client367>> ");
 	scanf("%s", command);
 	printf("Sending %s\n", command);

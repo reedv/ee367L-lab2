@@ -1,3 +1,8 @@
+/*
+ * Reed Villanueva
+ * EE367L
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

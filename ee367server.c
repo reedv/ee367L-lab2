@@ -31,6 +31,10 @@ void clientInteractionLogic(int socket_filedes);
 void sendingLogic(int sending_filedes, char* out_buffer);
 void listeningLogic(int listening_filedes, char* in_buffer);
 void processClientMessage(char* command, char* out_buffer);
+int strEqual(char* s1, char* s2);
+void processList(char* out_buffer);
+void processCheck(char* out_buffer);
+void processGet(char* out_buffer);
 
 int main(void)
 {
@@ -162,7 +166,7 @@ void clientInteractionLogic(int socket_filedes) {  // this is the child process
 	const char* EXIT_CMD = "quit";
 	char command[MAXDATASIZE];
 	char out_buffer[MAXDATASIZE];
-	while(strcmp(command, EXIT_CMD)) {
+	while(1) {
 		listeningLogic(socket_filedes, command);
 		processClientMessage(command, out_buffer);
 		sendingLogic(socket_filedes, out_buffer);
@@ -173,7 +177,6 @@ void clientInteractionLogic(int socket_filedes) {  // this is the child process
 }
 
 void listeningLogic(int listening_filedes, char* in_buffer) {
-	//char in_buffer[MAXDATASIZE];
 	int numbytes = recv(listening_filedes, in_buffer, MAXDATASIZE - 1, 0);
 	if ((numbytes) == ERRNUM) {
 		perror("server recv");
@@ -185,15 +188,34 @@ void listeningLogic(int listening_filedes, char* in_buffer) {
 }
 
 void processClientMessage(char* command, char* out_buffer) {
-	if(!strcmp(command, "test")) {
-		strcpy(out_buffer, "test");
+	if(strEqual(command, "test")) {
+		strcpy(out_buffer, command);
+	} else if(strEqual(command, "list")) {
+
+	} else if(strEqual(command, "check")) {
+
+	} else if(strEqual(command, "get")) {
+
+	} else if(strEqual(command, "quit")) {
+		strcpy(out_buffer, "goodbye");
 	} else {
-		strcpy(out_buffer, "default");
+		strcpy(out_buffer, "command not recognized");
 	}
+}
+int strEqual(char* s1, char* s2) {
+	return strcmp(s1, s2) == 0;
+}
+void processList(char* out_buffer) {
+
+}
+void processCheck(char* out_buffer) {
+
+}
+void processGet(char* out_buffer) {
+
 }
 
 void sendingLogic(int sending_filedes, char* out_buffer) {
-	//char* message = strcat("From server: message received: ", out_buffer);
 	ssize_t sendStatus = send(sending_filedes, out_buffer, strlen(out_buffer), 0);
 
 	if (sendStatus == ERRNUM) {

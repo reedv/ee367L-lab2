@@ -123,11 +123,10 @@ void serverInteractionLogic(int socket_filedes) {
 }
 
 void sendingLogic(int sending_filedes, char *command) {
-	//char command[MAXDATASIZE];
 	printf("client367>> ");
 	scanf("%s", command);
 	printf("Sending %s\n", command);
-	ssize_t sendStatus = send(sending_filedes, command, MAXDATASIZE-1/*strlen(command)*/, 0);
+	ssize_t sendStatus = send(sending_filedes, command, MAXDATASIZE-1, 0);
 
 	if (sendStatus == ERRNUM) {
 		// send message thru socket
@@ -137,13 +136,9 @@ void sendingLogic(int sending_filedes, char *command) {
 }
 
 void listeningLogic(int listening_filedes) {
-	// Prototype: int recv (int socket, void *buffer, size_t size, int flags)
-	// Description:
-	// The recv function is like read, but with the additional flags flags.
-	//    The possible values of flags are described in Socket Data Options.
-	//    This function returns the number of bytes received, or -1 on failure.
 	char in_buffer[MAXDATASIZE];
 	int numbytes = recv(listening_filedes, in_buffer, MAXDATASIZE-1, 0);
+
 	if ((numbytes) == ERRNUM) {
 		perror("client recv");
 		exit(1);

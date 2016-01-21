@@ -17,10 +17,10 @@
 #include <string.h>
  
 void error(char *s); 
-
-char *data = "Some input data\n"; 
-
 void childLogic(int in_descriptor[2], int out_descriptor[2]);
+
+char *data = "Some input data\n";
+
 
 int main()
 { 
@@ -29,7 +29,6 @@ int main()
 	    pid;
 
 	const int buffer_size = 255;
-
 	char buffer[buffer_size];
 
 	/* Creating two pipes: 'in' and 'out' */
@@ -37,8 +36,6 @@ int main()
 	// The pipe function creates a pipe and puts the file descriptors for
 	//    the reading and writing ends of the pipe (respectively) into
 	//    filedes[0] and filedes[1].
-	const int pipe_read = 0,
-			  pipe_write = 1;
 
 	int in_pipe_val = pipe(in_descriptor);
 	int out_pipe_val = pipe(out_descriptor);
@@ -49,47 +46,51 @@ int main()
 	if (isChildProcess) {
 		/* This is the child process */
 		childLogic(in_descriptor, out_descriptor);
+	} else {
+
+		/*  The following is in the parent process */
+
+		printf("Spawned 'hexdump -C' as a child process at pid %d\n", pid);
+
+		/* This is the parent process */
+		/* Close the pipe ends of the parent that the child uses to read in from / write out to so
+		* the when we close the others, an EOF will be transmitted properly.
+		*/
+
+		const int pipe_read = 0,
+				  pipe_write = 1;
+
+		close(in_descriptor[pipe_read]);
+		close(out_descriptor[pipe_write]);
+
+		/* The following displays on the console what's in the array 'data'
+		* The array was initialized at the top of this program with
+		* the string "Some input data"
+		*/
+		//  printf("<- %s", data);  Galen replaced this line with the following
+		printf("String sent to child: %s\n\n", data);
+
+
+		/* From the parent, write some data to the child's input.
+		* The child should be 'hexdump', which will process this
+		* data.
+		*/
+		write(in_descriptor[pipe_write], data, strlen(data));
+
+		/* Because of the small amount of data, the child may block unless we
+		* close its input stream. This sends an EOF to the child on it's
+		* stdin.
+		*/
+		close(in_descriptor[pipe_write]);
+
+		/* Read back any output */
+		int n = read(out_descriptor[pipe_read], buffer, buffer_size-5);
+		buffer[n] = 0;
+		//  printf("-> %s",buf);  Galen replaced this line with the following
+		printf("This was received by the child: %s", buffer);
+
+		exit(0);
 	}
-
-	/*  The following is in the parent process */
-
-	printf("Spawned 'hexdump -C' as a child process at pid %d\n", pid);
-
-	/* This is the parent process */
-	/* Close the pipe ends of the parent that the child uses to read in from / write out to so
-	* the when we close the others, an EOF will be transmitted properly.
-	*/
-
-	close(in_descriptor[pipe_read]);
-	close(out_descriptor[pipe_write]);
-
-	/* The following displays on the console what's in the array 'data'
-	* The array was initialized at the top of this program with
-	* the string "Some input data"
-	*/
-	//  printf("<- %s", data);  Galen replaced this line with the following
-	printf("String sent to child: %s\n\n", data);
-
-
-	/* From the parent, write some data to the child's input.
-	* The child should be 'hexdump', which will process this
-	* data.
-	*/
-	write(in_descriptor[pipe_write], data, strlen(data));
-
-	/* Because of the small amount of data, the child may block unless we
-	* close its input stream. This sends an EOF to the child on it's
-	* stdin.
-	*/
-	close(in_descriptor[pipe_write]);
-
-	/* Read back any output */
-	int n = read(out_descriptor[pipe_read], buffer, buffer_size-5);
-	buffer[n] = 0;
-	//  printf("-> %s",buf);  Galen replaced this line with the following
-	printf("This was received by the child: %s", buffer);
-
-	exit(0);
 }
  
 void error(char *s) 
@@ -97,6 +98,7 @@ void error(char *s)
 	perror(s);
 	exit(1);
 }
+
 
 void childLogic(int in_descriptor[2], int out_descriptor[2]) {
 	/* This is the child process */

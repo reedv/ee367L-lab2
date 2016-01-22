@@ -106,9 +106,10 @@ int main(void)
 
 	printf("server: waiting for connections...\n");
 
+	// client handeling logic
 	clientChildGenerator(listening_filedes);
 
-	return 0;
+	return 0;  // should this be in clientChildGnerator() ?
 }
 
 void sigchld_handler(int s)

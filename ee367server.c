@@ -192,6 +192,11 @@ void listeningLogic(int listening_filedes, char* in_buffer) {
 }
 
 void processClientMessage(char* command, char* out_buffer) {
+	/*
+	 * If other commands have not implemented logic to overwrite the server's output buffer,
+	 *    client calling any any valid command after calling "list" causes the server output
+	 *    to still display the list output.
+	 */
 	printf("**processClientMessage: command=%s\n", command);
 	if(strcmp(command, "test") == 0) {
 		strcpy(out_buffer, command);
@@ -199,8 +204,10 @@ void processClientMessage(char* command, char* out_buffer) {
 		processList(out_buffer);
 	} else if(strncmp(command, "check", 5) == 0) {  // processes client command: check<filename>
 		printf("**processClient/check\n");
+		strcpy(out_buffer, "check");
 	} else if(strncmp(command, "get", 3) == 0) {  // processes client command: get<filename>
 		printf("**processClient/get\n");
+		strcpy(out_buffer, "get");
 	} else if(strcmp(command, "quit") == 0) {
 		strcpy(out_buffer, "goodbye");
 	} else {

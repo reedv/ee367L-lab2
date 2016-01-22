@@ -174,7 +174,6 @@ void clientInteractionLogic(int socket_filedes) {  // this is the child process
 		listeningLogic(socket_filedes, command);
 		processClientMessage(command, out_buffer);
 		sendingLogic(socket_filedes, out_buffer);
-		strcpy(out_buffer, "");
 	}
 
 	close(socket_filedes);

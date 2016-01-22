@@ -108,7 +108,7 @@ void *getInputAddr(struct sockaddr *sa)
  * 		 	- add sending file descriptor WRONG
  * 		 1.2. ability to send a single-word, user-given command DONE
  * 		 1.3. ability to con't. loop to give commands until explicit exit DONE
- * 		 2.
+ * 		 2. Add piping for execl()ing linux commands
  */
 void serverInteractionLogic(int socket_filedes) {
 	const char* EXIT_CMD = "quit";
@@ -145,5 +145,5 @@ void listeningLogic(int listening_filedes) {
 	}
 
 	in_buffer[numbytes] = '\0';
-	printf("client: received '%s'\n", in_buffer);
+	printf("client received:\n'%s'\n", in_buffer);
 }

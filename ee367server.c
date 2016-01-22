@@ -16,7 +16,8 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
-//#include "pipeTesting.h"
+#include "serverToClientInteraction.h"
+#include "execProcesses.h"
 
 #define PORT "3490"  // the port users will be connecting to
 
@@ -167,12 +168,7 @@ void *getInputAddr(struct sockaddr *sa)
 }
 
 
-/*
- * TODO: 1. implement ability to confirm that server has received a client command DONE
- * 		 1.2. ability to con't. loop to give commands until explicit exit DONE
- * 		 2. ability to act on a client command
- * 		    ...will involve using pipes to execl() liux commands
- */
+
 void clientInteractionLogic(int socket_filedes) {  // this is the child process
 	const char* EXIT_CMD = "quit";
 	char command[MAXDATASIZE];
@@ -209,9 +205,9 @@ void processClientMessage(char* command, char* out_buffer) {
 		strcpy(out_buffer, command);
 	} else if(strcmp(command, "list") == 0) {  //process client command: list
 		processList(out_buffer);
-	} else if(strncmp(command, "check", 5) == 0) {  // processes client command: check<filename>
+	} else if(strncmp(command, "check", 5) == 0) {  // processes client command: check filename
 		processCheck(out_buffer);
-	} else if(strncmp(command, "get", 3) == 0) {  // processes client command: get<filename>
+	} else if(strncmp(command, "get", 3) == 0) {  // processes client command: get filename
 		processGet(out_buffer);
 	} else if(strcmp(command, "quit") == 0) {
 		strcpy(out_buffer, "goodbye");
@@ -227,14 +223,16 @@ void processList(char* out_buffer) {
 }
 void processCheck(char* out_buffer) {
 	printf("**processClient/check\n");
-	strcpy(out_buffer, "check");
+	strcpy(out_buffer, "check");  // temp. debug output
+
 	// call ls
-	// check results for a match
+	// check results of ls for a match
 	// put output message in out_buffer
 }
 void processGet(char* out_buffer) {
 	printf("**processClient/get\n");
-	strcpy(out_buffer, "get");
+	strcpy(out_buffer, "get");  // temp. debug output
+
 }
 
 void sendingLogic(int sending_filedes, char* out_buffer) {

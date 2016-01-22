@@ -27,6 +27,7 @@
 
 void sigchld_handler(int s);
 void reapDeadProcesses();
+void clientChildGenerator(int listening_filedes);
 void *getInputAddr(struct sockaddr *sa); // sockaddr used by kernel to store most addresses.
 void clientInteractionLogic(int socket_filedes);
 void sendingLogic(int sending_filedes, char* out_buffer);
@@ -38,6 +39,7 @@ void processGet(char* out_buffer);
 void execProcess(char* process_path, char* process, char* out_buffer);
 void error(char *s);
 void execChildLogic(char* process_path, char* process, int in_descriptor[2], int out_descriptor[2]);
+
 
 int main(void)
 {
@@ -59,6 +61,7 @@ int main(void)
 		return 1;
 	}
 
+	// server setup logic ----------------------------------------
 	// loop through all the results and bind to the first we can
 	struct addrinfo *ptr;
 	int listening_filedes;  // listen on sock_filedes
@@ -103,6 +106,28 @@ int main(void)
 
 	printf("server: waiting for connections...\n");
 
+	clientChildGenerator(listening_filedes);
+
+	return 0;
+}
+
+void sigchld_handler(int s)
+{
+	while(waitpid(-1, NULL, WNOHANG) > 0);
+}
+
+void reapDeadProcesses() {
+	struct sigaction sa;
+	sa.sa_handler = sigchld_handler; // reap all dead processes
+    sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART;
+	if (sigaction(SIGCHLD, &sa, NULL) == ERRNUM) {
+		perror("sigaction");
+		exit(1);
+	}
+}
+
+void clientChildGenerator(int listening_filedes) {
 	socklen_t sin_size;
 	struct sockaddr_storage client_addr; // connector's address information
 	int new_filedes;  //new connection on new_filedes
@@ -128,24 +153,6 @@ int main(void)
 
 		close(new_filedes);  // parent doesn't need this
 	}
-
-	return 0;
-}
-
-void sigchld_handler(int s)
-{
-	while(waitpid(-1, NULL, WNOHANG) > 0);
-}
-
-void reapDeadProcesses() {
-	struct sigaction sa;
-	sa.sa_handler = sigchld_handler; // reap all dead processes
-    sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &sa, NULL) == ERRNUM) {
-		perror("sigaction");
-		exit(1);
-	}
 }
 
 // get sockaddr, IPv4 or IPv6:
@@ -157,7 +164,6 @@ void *getInputAddr(struct sockaddr *sa)
 
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
-
 
 
 /*
@@ -203,11 +209,9 @@ void processClientMessage(char* command, char* out_buffer) {
 	} else if(strcmp(command, "list") == 0) {  //process client command: list
 		processList(out_buffer);
 	} else if(strncmp(command, "check", 5) == 0) {  // processes client command: check<filename>
-		printf("**processClient/check\n");
-		strcpy(out_buffer, "check");
+		processCheck(out_buffer);
 	} else if(strncmp(command, "get", 3) == 0) {  // processes client command: get<filename>
-		printf("**processClient/get\n");
-		strcpy(out_buffer, "get");
+		processGet(out_buffer);
 	} else if(strcmp(command, "quit") == 0) {
 		strcpy(out_buffer, "goodbye");
 	} else {
@@ -221,12 +225,15 @@ void processList(char* out_buffer) {
 	execProcess("/bin/ls", "ls", out_buffer);
 }
 void processCheck(char* out_buffer) {
+	printf("**processClient/check\n");
+	strcpy(out_buffer, "check");
 	// call ls
 	// check results for a match
 	// put output message in out_buffer
 }
 void processGet(char* out_buffer) {
-
+	printf("**processClient/get\n");
+	strcpy(out_buffer, "get");
 }
 
 void sendingLogic(int sending_filedes, char* out_buffer) {

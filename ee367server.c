@@ -22,7 +22,7 @@
 
 #define ERRNUM -1
 #define BACKLOG 10	 // how many pending connections queue will hold
-#define MAXDATASIZE 100 // max number of bytes we can get at once
+#define MAXDATASIZE 255 // max number of bytes we can get at once
 
 
 void sigchld_handler(int s);
@@ -32,13 +32,12 @@ void clientInteractionLogic(int socket_filedes);
 void sendingLogic(int sending_filedes, char* out_buffer);
 void listeningLogic(int listening_filedes, char* in_buffer);
 void processClientMessage(char* command, char* out_buffer);
-int strEqual(char* s1, char* s2);
 void processList(char* out_buffer);
 void processCheck(char* out_buffer);
 void processGet(char* out_buffer);
 void execProcess(char* process_path, char* process, char* out_buffer);
 void error(char *s);
-void childLogic(char* process_path, char* process, int in_descriptor[2], int out_descriptor[2]);
+void execChildLogic(char* process_path, char* process, int in_descriptor[2], int out_descriptor[2]);
 
 int main(void)
 {
@@ -175,6 +174,7 @@ void clientInteractionLogic(int socket_filedes) {  // this is the child process
 		listeningLogic(socket_filedes, command);
 		processClientMessage(command, out_buffer);
 		sendingLogic(socket_filedes, out_buffer);
+		strcpy(out_buffer, "");
 	}
 
 	close(socket_filedes);
@@ -189,32 +189,35 @@ void listeningLogic(int listening_filedes, char* in_buffer) {
 	}
 
 	in_buffer[numbytes] = '\0';
-	printf("server: received '%s'\n", in_buffer);
+	printf("server received: %s\n", in_buffer);
 }
 
 void processClientMessage(char* command, char* out_buffer) {
-	if(strEqual(command, "test")) {
+	printf("**processClientMessage: command=%s\n", command);
+	if(strcmp(command, "test") == 0) {
 		strcpy(out_buffer, command);
-	} else if(strEqual(command, "list")) {
+	} else if(strcmp(command, "list") == 0) {  //process client command: list
 		processList(out_buffer);
-	} else if(strEqual(command, "check")) {
-
-	} else if(strEqual(command, "get")) {
-
-	} else if(strEqual(command, "quit")) {
+	} else if(strncmp(command, "check", 5) == 0) {  // processes client command: check<filename>
+		printf("**processClient/check\n");
+	} else if(strncmp(command, "get", 3) == 0) {  // processes client command: get<filename>
+		printf("**processClient/get\n");
+	} else if(strcmp(command, "quit") == 0) {
 		strcpy(out_buffer, "goodbye");
 	} else {
-		strcpy(out_buffer, "command not recognized");
+		printf("**processClientMessage/default\n");
+		strcpy(out_buffer, "**command not recognized");
 	}
-}
-int strEqual(char* s1, char* s2) {
-	return strcmp(s1, s2) == 0;
+
+	printf("**exiting processClientMessage\n");
 }
 void processList(char* out_buffer) {
 	execProcess("/bin/ls", "ls", out_buffer);
 }
 void processCheck(char* out_buffer) {
-
+	// call ls
+	// check results for a match
+	// put output message in out_buffer
 }
 void processGet(char* out_buffer) {
 
@@ -227,6 +230,7 @@ void sendingLogic(int sending_filedes, char* out_buffer) {
 		// send message thru socket
 		perror("send");
 	}
+	printf("**exiting sendingLogic\n");
 }
 
 
@@ -241,16 +245,13 @@ void execProcess(char* process_path, char* process, char* out_buffer)
 	  	out_descriptor[2],
 	    pid;
 
-	const int buffer_size = 100;  //TODO: need to sync with ee367server/clientInteractionLogic/MAXDATASIZE
-							      //         -- current size of 100 may be too small for some outputs
-	//char out_buffer[buffer_size];
+	const int buffer_size = MAXDATASIZE;  //current size may be too small for some outputs
 
 	/* Creating two pipes: 'in' and 'out' */
 	/* In a pipe, xx[0] is for reading, xx[1] is for writing */
 	// The pipe function creates a pipe and puts the file descriptors for
 	//    the reading and writing ends of the pipe (respectively) into
 	//    filedes[0] and filedes[1].
-
 	int in_pipe_val = pipe(in_descriptor);
 	int out_pipe_val = pipe(out_descriptor);
 	if (in_pipe_val < 0) error("pipe in: failure");
@@ -259,7 +260,7 @@ void execProcess(char* process_path, char* process, char* out_buffer)
 	int isChildProcess = ((pid=fork()) == 0);
 	if (isChildProcess) {
 		/* This is the child process */
-		childLogic(process_path, process,
+		execChildLogic(process_path, process,
 				in_descriptor, out_descriptor);
 	} else {
 
@@ -315,7 +316,7 @@ void error(char *s)
 }
 
 
-void childLogic(char* process_path, char* process, int in_descriptor[2], int out_descriptor[2]) {
+void execChildLogic(char* process_path, char* process, int in_descriptor[2], int out_descriptor[2]) {
 	/* This is the child process */
 
 	const int pipe_read = 0,

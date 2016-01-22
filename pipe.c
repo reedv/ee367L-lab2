@@ -17,7 +17,7 @@
 #include <string.h>
  
 void error(char *s); 
-void childLogic(int in_descriptor[2], int out_descriptor[2]);
+void execChildLogic(int in_descriptor[2], int out_descriptor[2]);
 
 char *data = "Some input data\n";
 
@@ -45,7 +45,7 @@ int main()
 	int isChildProcess = ((pid=fork()) == 0);
 	if (isChildProcess) {
 		/* This is the child process */
-		childLogic(in_descriptor, out_descriptor);
+		execChildLogic(in_descriptor, out_descriptor);
 	} else {
 
 		/*  The following is in the parent process */
@@ -100,7 +100,7 @@ void error(char *s)
 }
 
 
-void childLogic(int in_descriptor[2], int out_descriptor[2]) {
+void execChildLogic(int in_descriptor[2], int out_descriptor[2]) {
 	/* This is the child process */
 
 	const int pipe_read = 0,

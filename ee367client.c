@@ -126,8 +126,8 @@ void sendingLogic(int sending_filedes, char *command) {
 
 	if(strcmp(command, "check")==0 || strcmp(command, "get")==0) {
 		char filename[MAXDATASIZE - strlen(command)];
-		printf("filename>> ");
-		scanf("%s", filename);
+		//printf("filename>> ");
+		scanf("%s", filename);  // catching space separated filename
 		printf("**filename=%s\n", filename);
 		strcat(command, filename);
 	}

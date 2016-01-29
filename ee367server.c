@@ -246,7 +246,7 @@ void processCheck(char* out_buffer, char* filename)
 	printf("**entering processClient/processCheck\n");
 	strcpy(out_buffer, "check");  // temp. debug output
 
-	// call process ls
+	// call process ls (maybe use processList)
 	// search results of ls for match to filename
 	// put output message in out_buffer
 }
@@ -254,6 +254,9 @@ void processGet(char* out_buffer, char* filename)
 {
 	printf("**processClient/get\n");
 	strcpy(out_buffer, "get");  // temp. debug output
+
+	// check if filename exists (maybe use processCheck)
+	// use cat process to put filename's contents to out_buffer
 
 }
 

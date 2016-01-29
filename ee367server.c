@@ -17,7 +17,6 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include "serverToClientInteraction.h"
-#include "execProcesses.h"
 
 #define PORT "3490"  // the port users will be connecting to
 
@@ -35,7 +34,7 @@ void sendingLogic(int sending_filedes, char* out_buffer);
 void listeningLogic(int listening_filedes, char* in_buffer);
 void processClientMessage(char* command, char* out_buffer);
 void processList(char* out_buffer);
-void processCheck(char* out_buffer);
+void processCheck(char* out_buffer, char* filename);
 void processGet(char* out_buffer);
 void execProcess(char* process_path, char* process, char* out_buffer);
 void error(char *s);
@@ -107,7 +106,7 @@ int main(void)
 
 	printf("server: waiting for connections...\n");
 
-	// client handeling logic
+	// client handling logic
 	clientChildGenerator(listening_filedes);
 
 	return 0;  // should this be in clientChildGnerator() ?
@@ -118,7 +117,8 @@ void sigchld_handler(int s)
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
-void reapDeadProcesses() {
+void reapDeadProcesses()
+{
 	struct sigaction sa;
 	sa.sa_handler = sigchld_handler; // reap all dead processes
     sigemptyset(&sa.sa_mask);
@@ -129,7 +129,9 @@ void reapDeadProcesses() {
 	}
 }
 
-void clientChildGenerator(int listening_filedes) {
+
+void clientChildGenerator(int listening_filedes)
+{
 	socklen_t sin_size;
 	struct sockaddr_storage client_addr; // connector's address information
 	int new_filedes;  //new connection on new_filedes
@@ -169,8 +171,8 @@ void *getInputAddr(struct sockaddr *sa)
 
 
 
-void clientInteractionLogic(int socket_filedes) {  // this is the child process
-	const char* EXIT_CMD = "quit";
+void clientInteractionLogic(int socket_filedes)
+{  // this is the child process
 	char command[MAXDATASIZE];
 	char out_buffer[MAXDATASIZE];
 	while(1) {
@@ -183,7 +185,9 @@ void clientInteractionLogic(int socket_filedes) {  // this is the child process
 	exit(0);
 }
 
-void listeningLogic(int listening_filedes, char* in_buffer) {
+void listeningLogic(int listening_filedes, char* in_buffer)
+{
+	printf("** entering listeningLogic\n");
 	int numbytes = recv(listening_filedes, in_buffer, MAXDATASIZE - 1, 0);
 	if ((numbytes) == ERRNUM) {
 		perror("server recv");
@@ -194,7 +198,8 @@ void listeningLogic(int listening_filedes, char* in_buffer) {
 	printf("server received: %s\n", in_buffer);
 }
 
-void processClientMessage(char* command, char* out_buffer) {
+void processClientMessage(char* command, char* out_buffer)
+{
 	/*
 	 * If other commands have not implemented logic to overwrite the server's output buffer,
 	 *    client calling any any valid command after calling "list" causes the server output
@@ -204,10 +209,16 @@ void processClientMessage(char* command, char* out_buffer) {
 	if(strcmp(command, "test") == 0) {
 		strcpy(out_buffer, command);
 	} else if(strcmp(command, "list") == 0) {  //process client command: list
+		printf("**processClientMessage/processList\n");
 		processList(out_buffer);
 	} else if(strncmp(command, "check", 5) == 0) {  // processes client command: check filename
-		processCheck(out_buffer);
+		printf("**processClientMessage/processCheck\n");
+		char* filename;
+		strcpy(filename, command+strlen("check"));
+		printf("**processClientMessage/processCheck: filename=%s", filename);
+		processCheck(out_buffer, filename);
 	} else if(strncmp(command, "get", 3) == 0) {  // processes client command: get filename
+		printf("**processClientMessage/processGet\n");
 		processGet(out_buffer);
 	} else if(strcmp(command, "quit") == 0) {
 		strcpy(out_buffer, "goodbye");
@@ -218,24 +229,28 @@ void processClientMessage(char* command, char* out_buffer) {
 
 	printf("**exiting processClientMessage\n");
 }
-void processList(char* out_buffer) {
+void processList(char* out_buffer)
+{
 	execProcess("/bin/ls", "ls", out_buffer);
 }
-void processCheck(char* out_buffer) {
+void processCheck(char* out_buffer, char* filename)
+{
 	printf("**processClient/check\n");
 	strcpy(out_buffer, "check");  // temp. debug output
 
-	// call ls
-	// check results of ls for a match
+	// call process ls
+	// search results of ls for match to filename
 	// put output message in out_buffer
 }
-void processGet(char* out_buffer) {
+void processGet(char* out_buffer)
+{
 	printf("**processClient/get\n");
 	strcpy(out_buffer, "get");  // temp. debug output
 
 }
 
-void sendingLogic(int sending_filedes, char* out_buffer) {
+void sendingLogic(int sending_filedes, char* out_buffer)
+{
 	ssize_t sendStatus = send(sending_filedes, out_buffer, strlen(out_buffer), 0);
 
 	if (sendStatus == ERRNUM) {
@@ -328,7 +343,9 @@ void error(char *s)
 }
 
 
-void execChildLogic(char* process_path, char* process, int in_descriptor[2], int out_descriptor[2]) {
+void execChildLogic(char* process_path, char* process,
+		int in_descriptor[2], int out_descriptor[2])
+{
 	/* This is the child process */
 
 	const int pipe_read = 0,

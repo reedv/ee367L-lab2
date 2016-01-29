@@ -1,0 +1,3 @@
+	1. When sending multiword commands from client, e.g. "check filename", the 2nd 
+word does not appear to be included in the message sent to the server. When sked to printf the 
+command sent, the server will only show "check" (rather than "check filname").

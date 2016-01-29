@@ -136,7 +136,7 @@ void sendingLogic(int sending_filedes, char *command) {
 }
 
 void listeningLogic(int listening_filedes) {
-	printf("**entering listeningLogic\n");
+	printf("** entering listeningLogic\n");
 	char in_buffer[MAXDATASIZE];
 	int numbytes = recv(listening_filedes, in_buffer, MAXDATASIZE-1, 0);
 
@@ -147,5 +147,5 @@ void listeningLogic(int listening_filedes) {
 
 	in_buffer[numbytes] = '\0';
 	printf("client received:\n'%s'\n", in_buffer);
-	printf("**exiting listeningLogic\n");
+	printf("** exiting listeningLogic\n");
 }

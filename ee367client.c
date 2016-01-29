@@ -85,8 +85,6 @@ int main(int argc, char *argv[])
 	freeaddrinfo(servinfo); // all done with this structure
 
 	//implement listening and sending logic here
-
-
 	serverInteractionLogic(socket_filedes);
 	return 0;
 }
@@ -125,6 +123,15 @@ void serverInteractionLogic(int socket_filedes) {
 void sendingLogic(int sending_filedes, char *command) {
 	printf("client367>> ");
 	scanf("%s", command);
+
+	if(strcmp(command, "check")==0 || strcmp(command, "get")==0) {
+		char filename[MAXDATASIZE - strlen(command)];
+		printf("filename>> ");
+		scanf("%s", filename);
+		printf("**filename=%s\n", filename);
+		strcat(command, filename);
+	}
+
 	printf("Sending %s\n", command);
 	ssize_t sendStatus = send(sending_filedes, command, MAXDATASIZE-1, 0);
 
@@ -132,7 +139,6 @@ void sendingLogic(int sending_filedes, char *command) {
 		// send message thru socket
 		perror("send");
 	}
-
 }
 
 void listeningLogic(int listening_filedes) {

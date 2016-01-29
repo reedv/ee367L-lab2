@@ -35,7 +35,7 @@ void listeningLogic(int listening_filedes, char* in_buffer);
 void processClientMessage(char* command, char* out_buffer);
 void processList(char* out_buffer);
 void processCheck(char* out_buffer, char* filename);
-void processGet(char* out_buffer);
+void processGet(char* out_buffer, char* filename);
 void execProcess(char* process_path, char* process, char* out_buffer);
 void error(char *s);
 void execChildLogic(char* process_path, char* process, int in_descriptor[2], int out_descriptor[2]);
@@ -208,21 +208,29 @@ void processClientMessage(char* command, char* out_buffer)
 	printf("**processClientMessage: command=%s\n", command);
 	if(strcmp(command, "test") == 0) {
 		strcpy(out_buffer, command);
-	} else if(strcmp(command, "list") == 0) {  //process client command: list
+	}
+	else if(strcmp(command, "list") == 0) {  //process client command: list
 		printf("**processClientMessage/processList\n");
 		processList(out_buffer);
-	} else if(strncmp(command, "check", 5) == 0) {  // processes client command: check filename
+	}
+	else if(strncmp(command, "check", 5) == 0) {  // processes client command: check filename
 		printf("**processClientMessage/processCheck\n");
-		char* filename;
+		char filename[MAXDATASIZE];
 		strcpy(filename, command+strlen("check"));
-		printf("**processClientMessage/processCheck: filename=%s", filename);
+		printf("**processClientMessage/processCheck: filename=%s\n", filename);
 		processCheck(out_buffer, filename);
-	} else if(strncmp(command, "get", 3) == 0) {  // processes client command: get filename
+	}
+	else if(strncmp(command, "get", 3) == 0) {  // processes client command: get filename
 		printf("**processClientMessage/processGet\n");
-		processGet(out_buffer);
-	} else if(strcmp(command, "quit") == 0) {
+		char filename[MAXDATASIZE];
+		strcpy(filename, command+strlen("get"));
+		printf("**processClientMessage/processCheck: filename=%s\n", filename);
+		processGet(out_buffer, filename);
+	}
+	else if(strcmp(command, "quit") == 0) {
 		strcpy(out_buffer, "goodbye");
-	} else {
+	}
+	else {
 		printf("**processClientMessage/default\n");
 		strcpy(out_buffer, "**command not recognized");
 	}
@@ -235,14 +243,14 @@ void processList(char* out_buffer)
 }
 void processCheck(char* out_buffer, char* filename)
 {
-	printf("**processClient/check\n");
+	printf("**entering processClient/processCheck\n");
 	strcpy(out_buffer, "check");  // temp. debug output
 
 	// call process ls
 	// search results of ls for match to filename
 	// put output message in out_buffer
 }
-void processGet(char* out_buffer)
+void processGet(char* out_buffer, char* filename)
 {
 	printf("**processClient/get\n");
 	strcpy(out_buffer, "get");  // temp. debug output

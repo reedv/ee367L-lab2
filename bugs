@@ -1,3 +1,30 @@
-	1. When sending multiword commands from client, e.g. "check filename", the 2nd 
-word does not appear to be included in the message sent to the server. When sked to printf the 
-command sent, the server will only show "check" (rather than "check filname").
+	p1. When sending multiword commands from client, e.g. "check filename", the 2nd 
+word does not appear to be included in the message sent to the server. When client is 
+asked to printf the command sent, it shows "check" (rather than "check filename").
+
+	try1. In ee367client/sendingLogic, replaced scanf() with fgets() to read in command
+	Prototype: char * fgets (char *s, int count, FILE *stream)
+	Description:
+The fgets function reads characters from the stream stream up to and including a newline character and 
+ stores them in the string s, adding a null character to mark the end of the string. You must supply count 
+ characters worth of space in s, but the number of characters read is at most count 1. The extra character 
+ space is used to hold the null character at the end of the string. 
+
+If the system is already at end of file when you call fgets, then the contents of the array s are unchanged 
+ and a null pointer is returned. A null pointer is also returned if a read error occurs. Otherwise, the return 
+ value is the pointer s. 
+
+Warning: If the input data has a null character, you can't tell. So don't use fgets unless you know the data 
+ cannot contain a null. Don't use it to read files edited by the user because, if the user inserts a null 
+ character, you should either handle it properly or print a clear error message. We recommend using getline 
+ instead of fgets. 
+ 	
+ 	try2. fgets() was causing problems when client sent single word commands.
+ Changing user interface for checking and getting so that the promt to enter the filename is 
+ given on a seperate line after the comand is given.
+ 	
+ 	NOTE: When using scanf() for reading a string, the pointer that the string is pouring into
+ needs to have space allocated - that is, it should be a char array. (Same with using strcpy())
+ 	
+ 	
+ 	p2.

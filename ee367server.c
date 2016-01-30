@@ -218,6 +218,7 @@ void processClientMessage(char* command, char* out_buffer)
 		char filename[MAXDATASIZE];
 		strcpy(filename, command+strlen("check"));
 		printf("**processClientMessage/processCheck: filename=%s\n", filename);
+
 		processCheck(out_buffer, filename);
 	}
 	else if(strncmp(command, "get", 3) == 0) {  // processes client command: get filename
@@ -225,6 +226,7 @@ void processClientMessage(char* command, char* out_buffer)
 		char filename[MAXDATASIZE];
 		strcpy(filename, command+strlen("get"));
 		printf("**processClientMessage/processCheck: filename=%s\n", filename);
+
 		processGet(out_buffer, filename);
 	}
 	else if(strcmp(command, "quit") == 0) {
@@ -244,11 +246,60 @@ void processList(char* out_buffer)
 void processCheck(char* out_buffer, char* filename)
 {
 	printf("**entering processClient/processCheck\n");
-	strcpy(out_buffer, "check");  // temp. debug output
+	strcpy(out_buffer, "check");
 
-	// call process ls (maybe use processList)
+	/*
+	 * This was an attempt to use grep to search for the file.
+	 * Using this would req. grep args. to be entered seperatly
+	 * which would involve changing the signature of the execProcess()
+	 * and subsequent methods to take optional params (variadic)
+	 */
+//	char grep_out[MAXDATASIZE];
+//	grep_out[0] = 0;
+//
+//	char grep_search[MAXDATASIZE];
+//	strcpy(grep_search, "grep . -name ");
+//	strcat(grep_search, filename);
+//	printf("** processClient/processCheck: grep_search: %s\n", grep_search);
+//	execProcess("/usr/bin/grep", grep_search, grep_out);
+//	printf("** processClient/processCheck: grep_out= %s\n", grep_out);
+//
+//	if(grep_out[0] == 0)
+//		strcpy(out_buffer, "File not found");
+//	else
+//		strcpy(out_buffer, "File found");
+
+	/*
+	 * O(n) for ls_buffer.lenth == n
+	 */
+	char ls_buffer[MAXDATASIZE];
+	execProcess("/bin/ls", "ls", ls_buffer);
+	printf("**processClient/processCheck: ls_buffer: %s", ls_buffer);
+
 	// search results of ls for match to filename
-	// put output message in out_buffer
+	// Current implementation assumes ls_buffer words are delimited by newline char
+	int has_file = 0;
+	char * token_ptr;
+	token_ptr = strtok(ls_buffer,"\n");
+    while (token_ptr != NULL) {
+    	printf ("**processClient/processCheck:searchloop\n %s\n", token_ptr);
+		if (strcmp(filename, token_ptr) == 0) {
+			has_file = 1;
+			break;
+		}
+
+    	token_ptr = strtok (NULL, "\n");
+	}
+
+    if(has_file) {
+    	strcpy(out_buffer, "Server found: ");
+    	strcat(out_buffer, filename);
+    }
+    else {
+    	strcpy(out_buffer, "Server did not find: ");
+    	strcat(out_buffer, filename);
+    }
+
 }
 void processGet(char* out_buffer, char* filename)
 {
@@ -322,14 +373,16 @@ void execProcess(char* process_path, char* process, char* out_buffer)
 		* the string "Some input data"
 		*/
 		//  printf("<- %s", data);  Galen replaced this line with the following
-		char *data = "Some input data\n";
-		printf("String sent to child: %s\n\n", data);
+
+		//char *data = "Some input data\n";
+		//printf("String sent to child: %s\n\n", data);
 
 
 		/* From the parent, write some data to the child's input.
 		* The child should be 'hexdump', which will process this
 		* data.
 		*/
+
 		//write(in_descriptor[pipe_write], data, strlen(data));
 
 		/* Because of the small amount of data, the child may block unless we

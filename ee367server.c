@@ -315,9 +315,13 @@ void processGet(char* out_buffer, char* filename)
 	printf("**processClient/get\n");
 	strcpy(out_buffer, "get");  // temp. debug output
 
-	// check if filename exists (maybe use processCheck)
-	// use cat process to put filename's contents to out_buffer
 
+	int has_file = checkForFile(filename);
+	if(has_file) {
+		// use cat process to put filename's contents to out_buffer
+	} else {
+
+	}
 }
 
 void sendingLogic(int sending_filedes, char* out_buffer)

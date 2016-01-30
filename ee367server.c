@@ -35,6 +35,7 @@ void listeningLogic(int listening_filedes, char* in_buffer);
 void processClientMessage(char* command, char* out_buffer);
 void processList(char* out_buffer);
 void processCheck(char* out_buffer, char* filename);
+int checkForFile(char* filename);
 void processGet(char* out_buffer, char* filename);
 void execProcess(char* process_path, char* process, char* out_buffer);
 void error(char *s);
@@ -243,11 +244,26 @@ void processList(char* out_buffer)
 {
 	execProcess("/bin/ls", "ls", out_buffer);
 }
+
 void processCheck(char* out_buffer, char* filename)
 {
 	printf("**entering processClient/processCheck\n");
 	strcpy(out_buffer, "check");
 
+	int has_file = checkForFile(filename);
+
+    if(has_file) {
+    	strcpy(out_buffer, "Server found: ");
+    	strcat(out_buffer, filename);
+    }
+    else {
+    	strcpy(out_buffer, "Server did not find: ");
+    	strcat(out_buffer, filename);
+    }
+
+}
+int checkForFile(char* filename)
+{
 	/*
 	 * This was an attempt to use grep to search for the file.
 	 * Using this would req. grep args. to be entered seperatly
@@ -281,26 +297,19 @@ void processCheck(char* out_buffer, char* filename)
 	int has_file = 0;
 	char * token_ptr;
 	token_ptr = strtok(ls_buffer,"\n");
-    while (token_ptr != NULL) {
-    	printf ("**processClient/processCheck:searchloop\n %s\n", token_ptr);
+	while (token_ptr != NULL) {
+		printf ("**processClient/processCheck:searchloop\n %s\n", token_ptr);
 		if (strcmp(filename, token_ptr) == 0) {
 			has_file = 1;
-			break;
+			return has_file;
 		}
 
-    	token_ptr = strtok (NULL, "\n");
+		token_ptr = strtok (NULL, "\n");
 	}
 
-    if(has_file) {
-    	strcpy(out_buffer, "Server found: ");
-    	strcat(out_buffer, filename);
-    }
-    else {
-    	strcpy(out_buffer, "Server did not find: ");
-    	strcat(out_buffer, filename);
-    }
-
+	return has_file;
 }
+
 void processGet(char* out_buffer, char* filename)
 {
 	printf("**processClient/get\n");

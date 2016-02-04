@@ -171,6 +171,8 @@ void *getInputAddr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+
+
 /* Server-to-client interaction logic
  * ------------------------------------------------------------------------------------ */
 
@@ -338,6 +340,7 @@ void sendingLogic(int sending_filedes, char* out_buffer)
 	}
 	printf("**exiting sendingLogic\n");
 }
+
 
 
 /* Process logic
@@ -521,7 +524,7 @@ void getFileContents(char* out_buffer, char* filename)
 
 		/*  The following is in the parent process */
 
-		//printf("Spawned '%s' as a child process at pid %d\n", process, pid);
+		printf("Spawned 'cat %s' as a child process at pid %d\n", filename, pid);
 
 
 		const int pipe_read = 0,

@@ -24,7 +24,8 @@ void serverInteractionLogic(int socket_filedes);
 void sendingLogic(int sending_filedes, char* command);
 void processGet(char* display, char* filename);
 int checkForFile(char* filename);
-void listeningLogic(int listening_filedes);
+void listeningLogic(int listening_filedes, char* command);
+void writeToFile(char in_buffer[MAXDATASIZE], char* command);
 void execProcess(char* process_path, char* process, char* out_buffer);
 void error(char *s);
 void execChildLogic(char* process_path, char* process, int in_descriptor[2], int out_descriptor[2]);
@@ -118,19 +119,22 @@ void serverInteractionLogic(int socket_filedes) {
 	while(strcmp(command, EXIT_CMD)) {
 		sendingLogic(socket_filedes, command);
 
-		if(strcmp(command, "display")!=0)
-			listeningLogic(socket_filedes);
+		int notClientSideCommand = strcmp(command, "display") != 0;
+		if (notClientSideCommand)
+			listeningLogic(socket_filedes, command);
 	}
 
 	close(socket_filedes);
 	close(socket_filedes);
 }
 
+
 void sendingLogic(int sending_filedes, char *command) {
 	printf("client367>> ");
 	scanf("%s", command);
 
-	if(strcmp(command, "check")==0 || strcmp(command, "get")==0) {
+	int needsFilenameArg = strcmp(command, "check") == 0 || strcmp(command, "get") == 0;
+	if (needsFilenameArg) {
 		char filename[MAXDATASIZE - strlen(command)];
 		scanf("%s", filename);  // catching space separated filename
 		printf("**filename=%s\n", filename);
@@ -138,12 +142,14 @@ void sendingLogic(int sending_filedes, char *command) {
 	}
 
 	// processing client-side commands
-	if(strcmp(command, "display")==0){
+	int isClientSideCommand = strcmp(command, "display") == 0;
+	if (isClientSideCommand) {
 		char display[MAXDATASIZE];
 		char filename[MAXDATASIZE];
 		scanf("%s", filename);
 		processGet(display, filename);
-	} else {
+	}
+	else {
 		printf("Sending %s\n", command);
 		ssize_t sendStatus = send(sending_filedes, command, MAXDATASIZE-1, 0);
 
@@ -197,7 +203,8 @@ int checkForFile(char* filename)
 }
 
 
-void listeningLogic(int listening_filedes) {
+void listeningLogic(int listening_filedes, char* command)
+{
 	printf("** entering listeningLogic\n");
 	char in_buffer[MAXDATASIZE];
 	int numbytes = recv(listening_filedes, in_buffer, MAXDATASIZE-1, 0);
@@ -206,11 +213,32 @@ void listeningLogic(int listening_filedes) {
 		perror("client recv");
 		exit(1);
 	}
-
 	in_buffer[numbytes] = '\0';
-	printf("client received:\n'%s'\n", in_buffer);
+
+	if(strncmp(command, "get", 3)==0) {
+		writeToFile(in_buffer, command);
+	} else {
+		printf("client received:\n'%s'\n", in_buffer);
+	}
+
 	printf("** exiting listeningLogic\n");
 }
+
+void writeToFile(char in_buffer[MAXDATASIZE], char* command)
+{
+	char filename[MAXDATASIZE];
+	strcpy(filename, command + strlen("get"));
+	printf("**filename=%s\n", filename);
+	// Open a file for writing.
+	// (This will replace any existing file. Use "w+" for appending)
+	FILE* file = fopen(filename, "w");
+	int results = fputs(in_buffer, file);
+	if (results == EOF) {
+		// Failed to write do error code here.
+	}
+	fclose(file);
+}
+
 
 
 

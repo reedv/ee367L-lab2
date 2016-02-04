@@ -11,7 +11,7 @@
 #include "execProcesses.h"
 
 #define ERRNUM -1
-#define MAXDATASIZE 255
+#define MAXDATASIZE 20000
 
 /*
 void sendingLogic(int sending_filedes, char* out_buffer);

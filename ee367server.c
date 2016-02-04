@@ -22,7 +22,7 @@
 
 #define ERRNUM -1
 #define BACKLOG 10	 // how many pending connections queue will hold
-#define MAXDATASIZE 255 // max number of bytes we can get at once
+#define MAXDATASIZE 20000 // max number of bytes we can get at once
 
 
 void sigchld_handler(int s);
@@ -40,6 +40,7 @@ void processGet(char* out_buffer, char* filename);
 void execProcess(char* process_path, char* process, char* out_buffer);
 void error(char *s);
 void execChildLogic(char* process_path, char* process, int in_descriptor[2], int out_descriptor[2]);
+void getFileContents(char* out_buffer, char* filename);
 
 
 int main(void)
@@ -170,6 +171,8 @@ void *getInputAddr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+/* Server-to-client interaction logic
+ * ------------------------------------------------------------------------------------ */
 
 
 void clientInteractionLogic(int socket_filedes)
@@ -248,7 +251,7 @@ void processList(char* out_buffer)
 void processCheck(char* out_buffer, char* filename)
 {
 	printf("**entering processClient/processCheck\n");
-	strcpy(out_buffer, "check");
+//	strcpy(out_buffer, "check");  // temp. debug output
 
 	int has_file = checkForFile(filename);
 
@@ -257,7 +260,7 @@ void processCheck(char* out_buffer, char* filename)
     	strcat(out_buffer, filename);
     }
     else {
-    	strcpy(out_buffer, "Server did not find: ");
+    	strcpy(out_buffer, "Server did NOT find: ");
     	strcat(out_buffer, filename);
     }
 
@@ -286,7 +289,7 @@ int checkForFile(char* filename)
 //		strcpy(out_buffer, "File found");
 
 	/*
-	 * O(n) for ls_buffer.lenth == n
+	 * T(n) = O(n) for ls_buffer.lenth == n
 	 */
 	char ls_buffer[MAXDATASIZE];
 	execProcess("/bin/ls", "ls", ls_buffer);
@@ -318,9 +321,10 @@ void processGet(char* out_buffer, char* filename)
 
 	int has_file = checkForFile(filename);
 	if(has_file) {
-		// use cat process to put filename's contents to out_buffer
+		getFileContents(out_buffer, filename);
 	} else {
-
+		strcpy(out_buffer, "Server did NOT find: ");
+		strcat(out_buffer, filename);
 	}
 }
 
@@ -336,6 +340,8 @@ void sendingLogic(int sending_filedes, char* out_buffer)
 }
 
 
+/* Process logic
+ * ------------------------------------------------------------------------------------ */
 
 /*
  * Given a process name, process, and the path to the process on the executing system, process_path,
@@ -464,4 +470,72 @@ void execChildLogic(char* process_path, char* process,
 	 * function, which would indicate an error
 	 */
 	error("Could not exec command");
+}
+
+
+/*
+ * This function is a special case of execProcess() that uses the cat command to send to contents of
+ * a given file to the server's out_buffer and so requires additional arguments for the child
+ * process's execl() function. Since this is the only time additional args. are needed,
+ * this function was made rather than generalize the existing execProcess() function just
+ * b/c of this special case.
+ */
+void getFileContents(char* out_buffer, char* filename)
+{
+	int in_descriptor[2],
+	  	out_descriptor[2],
+	    pid;
+
+	const int buffer_size = MAXDATASIZE;  //current size may be too small for some outputs
+
+	int in_pipe_val = pipe(in_descriptor);
+	int out_pipe_val = pipe(out_descriptor);
+	if (in_pipe_val < 0) error("pipe in: failure");
+	if (out_pipe_val < 0) error("pipe out: failure");
+
+	int isChildProcess = ((pid=fork()) == 0);
+	if (isChildProcess) {
+		/* This is the child process */
+
+		const int pipe_read = 0,
+				  pipe_write = 1;
+
+		/* Close stdin, stdout, stderr */
+		int stdin = 0, stdout = 1, stderr = 2;
+		close(stdin);
+		close(stdout);
+		close(stderr);
+
+		dup2(in_descriptor[pipe_read], stdin);
+		dup2(out_descriptor[pipe_write], stdout);
+		dup2(out_descriptor[pipe_write], stderr);
+
+		close(in_descriptor[pipe_write]);
+		close(out_descriptor[pipe_read]);
+
+		//execl("/usr/bin/hexdump", "hexdump", "-C", (char*) NULL);
+		execl("/bin/cat", "cat", filename, (char*)NULL);
+
+		error("Could not exec command");
+	} else {
+
+		/*  The following is in the parent process */
+
+		//printf("Spawned '%s' as a child process at pid %d\n", process, pid);
+
+
+		const int pipe_read = 0,
+				  pipe_write = 1;
+
+		close(in_descriptor[pipe_read]);
+		close(out_descriptor[pipe_write]);
+		close(in_descriptor[pipe_write]);
+
+		/* Read back any output */
+		int n = read(out_descriptor[pipe_read], out_buffer, buffer_size-5);
+		out_buffer[n] = 0;
+
+		printf("This was received by the child process: \n%s\n", out_buffer);
+
+	}
 }

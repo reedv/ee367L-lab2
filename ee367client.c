@@ -17,7 +17,7 @@
 
 #define PORT "3490" // the port client will be connecting to 
 #define ERRNUM -1
-#define MAXDATASIZE 255 // max number of bytes we can get at once
+#define MAXDATASIZE 20000 // max number of bytes we can get at once
 
 void *getInputAddr(struct sockaddr *sa);
 void serverInteractionLogic(int socket_filedes);
@@ -99,6 +99,8 @@ void *getInputAddr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+/* Client-to-server interaction logic
+ * ------------------------------------------------------------------------------------ */
 
 
 /*

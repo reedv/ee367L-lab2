@@ -28,7 +28,8 @@ void listeningLogic(int listening_filedes, char* command);
 void writeToFile(char in_buffer[MAXDATASIZE], char* command);
 void execProcess(char* process_path, char* process, char* out_buffer);
 void error(char *s);
-void execChildLogic(char* process_path, char* process, int in_descriptor[2], int out_descriptor[2]);
+void execChildLogic(char* process_path, char* process,
+		int in_descriptor[2], int out_descriptor[2]);
 void getFileContents(char* display, char* filename);
 
 
@@ -119,9 +120,10 @@ void serverInteractionLogic(int socket_filedes) {
 	while(strcmp(command, EXIT_CMD)) {
 		sendingLogic(socket_filedes, command);
 
-		int notClientSideCommand = strcmp(command, "display") != 0;
-		if (notClientSideCommand)
+		int notClientSideCommand = (strcmp(command, "display") != 0) && (strcmp(command, "help") != 0);
+		if (notClientSideCommand) {
 			listeningLogic(socket_filedes, command);
+		}
 	}
 
 	close(socket_filedes);
@@ -142,12 +144,22 @@ void sendingLogic(int sending_filedes, char *command) {
 	}
 
 	// processing client-side commands
-	int isClientSideCommand = strcmp(command, "display") == 0;
+	int isClientSideCommand = strcmp(command, "display") == 0 || strcmp(command, "help") == 0;
 	if (isClientSideCommand) {
-		char display[MAXDATASIZE];
-		char filename[MAXDATASIZE];
-		scanf("%s", filename);
-		processGet(display, filename);
+		if(strcmp(command, "display") == 0) {
+			char display[MAXDATASIZE];
+			char filename[MAXDATASIZE];
+			scanf("%s", filename);
+			processGet(display, filename);
+		}
+		if(strcmp(command, "help") == 0) {
+			printf("list: lists all files and directory names at the directory of the server.\n"
+				   "check filename: checks if the file filename is contained in the server directory.\n"
+				   "get filename: downloads the contents of the file filename from the server to a file of the same name in the client directory\n"
+				   "display filename: Displays the contents of the file filename from the client directory\n"
+				   "help: Displays this message\n"
+				   "quit: Closes client connection to the server.\n");
+		}
 	}
 	else {
 		printf("Sending %s\n", command);
@@ -244,11 +256,6 @@ void writeToFile(char in_buffer[MAXDATASIZE], char* command)
 
 /* Process logic
  * ------------------------------------------------------------------------------------ */
-
-/*
- * Given a process name, process, and the path to the process on the executing system, process_path,
- * the output of process is piped into the out_buffer.
- */
 void execProcess(char* process_path, char* process, char* out_buffer)
 {
 	int in_descriptor[2],
@@ -373,7 +380,6 @@ void execChildLogic(char* process_path, char* process,
 	 */
 	error("Could not exec command");
 }
-
 
 /*
  * This function is a special case of execProcess() that uses the cat command to send to contents of
